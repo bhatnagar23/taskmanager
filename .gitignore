@@ -36,7 +36,7 @@ build/
 target/
 
 # Environment
-application.properties
+
 *.env
 
 # OS files
