@@ -17,12 +17,9 @@
             cursor: pointer;
         }
         .project-card:hover { transform: translateY(-5px); }
-        .badge-admin { background: #667eea; }
     </style>
 </head>
 <body>
-
-<!-- Navbar -->
 <nav class="navbar navbar-dark px-4 py-3">
         <span class="navbar-brand fw-bold">
             <i class="bi bi-kanban"></i> Task Manager
@@ -36,8 +33,6 @@
 </nav>
 
 <div class="container mt-4">
-
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold">My Projects</h3>
         <button class="btn btn-primary"
@@ -46,8 +41,6 @@
             <i class="bi bi-plus-circle"></i> New Project
         </button>
     </div>
-
-    <!-- Projects Grid -->
     <div class="row" id="projectsGrid">
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-primary"></div>
@@ -61,34 +54,26 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-plus-circle text-primary"></i>
-                    Create New Project
-                </h5>
-                <button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                <h5 class="modal-title fw-bold">Create New Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="createError" class="alert alert-danger d-none"></div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Project Name</label>
-                    <input type="text" id="projectName"
-                           class="form-control"
+                    <label class="form-label fw-bold">Project Name *</label>
+                    <input type="text" id="projectName" class="form-control"
                            placeholder="Enter project name">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Description</label>
-                    <textarea id="projectDesc" class="form-control"
-                              rows="3"
-                              placeholder="What is this project about?">
-                        </textarea>
+                    <textarea id="projectDesc" class="form-control" rows="3"
+                              placeholder="What is this project about?"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary"
                         data-bs-dismiss="modal">Cancel</button>
-                <button onclick="createProject()"
-                        class="btn btn-primary" id="createBtn">
+                <button onclick="createProject()" class="btn btn-primary" id="createBtn">
                     <i class="bi bi-plus-circle"></i> Create
                 </button>
             </div>
@@ -96,19 +81,62 @@
     </div>
 </div>
 
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add Member to Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="memberError" class="alert alert-danger d-none"></div>
+                <div id="memberSuccess" class="alert alert-success d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Member Email *</label>
+                    <input type="email" id="memberEmail" class="form-control"
+                           placeholder="Enter member's email">
+                    <small class="text-muted">Member must already have an account</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button onclick="addMember()" class="btn btn-success" id="addMemberBtn">
+                    <i class="bi bi-person-plus"></i> Add Member
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Members Modal -->
+<div class="modal fade" id="viewMembersModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Project Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="membersList">
+                Loading...
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const API = 'taskmanager-production-4f97.up.railway.app';
+    // ✅ Use relative URL - works both locally and on Railway!
+    const API = '';
     const token = localStorage.getItem('token');
-
-    // Redirect to login if not logged in
     if (!token) window.location.href = 'login.html';
 
-    // Show user name in navbar
     document.getElementById('userName').textContent =
         'Hello, ' + localStorage.getItem('userName');
 
-    // Load projects when page opens
+    let currentProjectId = null;
+
     loadProjects();
 
     async function loadProjects() {
@@ -116,35 +144,33 @@
             const response = await fetch(`${API}/api/projects`, {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-
+            if (response.status === 403 || response.status === 401) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+                return;
+            }
             const data = await response.json();
             displayProjects(data);
-
         } catch (error) {
             document.getElementById('projectsGrid').innerHTML =
-                '<p class="text-danger">Failed to load projects!</p>';
+                '<p class="text-danger text-center">Failed to load projects! Please refresh.</p>';
         }
     }
 
     function displayProjects(members) {
         const grid = document.getElementById('projectsGrid');
-
-        if (members.length === 0) {
+        if (!members || members.length === 0) {
             grid.innerHTML = `
                     <div class="col-12 text-center py-5">
                         <i class="bi bi-folder-x fs-1 text-muted"></i>
-                        <p class="mt-2 text-muted">
-                            No projects yet. Create your first one!
-                        </p>
+                        <p class="mt-2 text-muted">No projects yet. Create your first one!</p>
                     </div>`;
             return;
         }
-
         grid.innerHTML = members.map(member => `
                 <div class="col-md-4 mb-4">
-                    <div class="card project-card p-3"
-                         onclick="openProject(${member.project.id})">
-                        <div class="d-flex justify-content-between">
+                    <div class="card project-card p-3">
+                        <div class="d-flex justify-content-between mb-2">
                             <h5 class="fw-bold">${member.project.name}</h5>
                             <span class="badge ${member.role === 'ADMIN' ?
             'bg-primary' : 'bg-secondary'}">
@@ -154,12 +180,26 @@
                         <p class="text-muted small">
                             ${member.project.description || 'No description'}
                         </p>
-                        <div class="mt-2">
-                            <i class="bi bi-arrow-right-circle text-primary">
-                            </i>
-                            <span class="text-primary small">
-                                View Tasks
-                            </span>
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            <button onclick="openProject(${member.project.id})"
+                                    class="btn btn-primary btn-sm">
+                                <i class="bi bi-list-task"></i> Tasks
+                            </button>
+                            ${member.role === 'ADMIN' ? `
+                            <button onclick="openAddMember(${member.project.id})"
+                                    class="btn btn-success btn-sm">
+                                <i class="bi bi-person-plus"></i> Add Member
+                            </button>
+                            <button onclick="viewMembers(${member.project.id})"
+                                    class="btn btn-info btn-sm text-white">
+                                <i class="bi bi-people"></i> Members
+                            </button>
+                            ` : `
+                            <button onclick="viewMembers(${member.project.id})"
+                                    class="btn btn-info btn-sm text-white">
+                                <i class="bi bi-people"></i> Members
+                            </button>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -167,16 +207,16 @@
     }
 
     async function createProject() {
-        const name = document.getElementById('projectName').value;
-        const description = document.getElementById('projectDesc').value;
+        const name = document.getElementById('projectName').value.trim();
+        const description = document.getElementById('projectDesc').value.trim();
+        const errEl = document.getElementById('createError');
 
         if (!name) {
-            document.getElementById('createError').textContent =
-                'Project name is required!';
-            document.getElementById('createError')
-                .classList.remove('d-none');
+            errEl.textContent = 'Project name is required!';
+            errEl.classList.remove('d-none');
             return;
         }
+        errEl.classList.add('d-none');
 
         const btn = document.getElementById('createBtn');
         btn.textContent = 'Creating...';
@@ -193,24 +233,155 @@
             });
 
             if (response.ok) {
-                // Close modal and reload
                 bootstrap.Modal.getInstance(
-                    document.getElementById('createProjectModal')
-                ).hide();
+                    document.getElementById('createProjectModal')).hide();
                 document.getElementById('projectName').value = '';
                 document.getElementById('projectDesc').value = '';
                 loadProjects();
+            } else {
+                const err = await response.text();
+                errEl.textContent = 'Failed to create project: ' + err;
+                errEl.classList.remove('d-none');
             }
         } catch (error) {
-            alert('Failed to create project!');
+            errEl.textContent = 'Server error! Try again.';
+            errEl.classList.remove('d-none');
         }
 
         btn.innerHTML = '<i class="bi bi-plus-circle"></i> Create';
         btn.disabled = false;
     }
 
+    function openAddMember(projectId) {
+        currentProjectId = projectId;
+        document.getElementById('memberEmail').value = '';
+        document.getElementById('memberError').classList.add('d-none');
+        document.getElementById('memberSuccess').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+    }
+
+    async function addMember() {
+        const email = document.getElementById('memberEmail').value.trim();
+        const errEl = document.getElementById('memberError');
+        const sucEl = document.getElementById('memberSuccess');
+
+        if (!email) {
+            errEl.textContent = 'Please enter an email!';
+            errEl.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('addMemberBtn');
+        btn.textContent = 'Adding...';
+        btn.disabled = true;
+
+        try {
+            // First find user by email
+            const userRes = await fetch(
+                `${API}/api/users/find?email=${email}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+            if (!userRes.ok) {
+                errEl.textContent = 'User not found with this email!';
+                errEl.classList.remove('d-none');
+                btn.innerHTML = '<i class="bi bi-person-plus"></i> Add Member';
+                btn.disabled = false;
+                return;
+            }
+
+            const user = await userRes.json();
+
+            // Add member to project
+            const response = await fetch(
+                `${API}/api/projects/${currentProjectId}/members`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ userId: user.id })
+                });
+
+            if (response.ok) {
+                sucEl.textContent = 'Member added successfully!';
+                sucEl.classList.remove('d-none');
+                errEl.classList.add('d-none');
+                document.getElementById('memberEmail').value = '';
+            } else {
+                const err = await response.text();
+                errEl.textContent = err || 'Failed to add member!';
+                errEl.classList.remove('d-none');
+            }
+        } catch (error) {
+            errEl.textContent = 'Server error! Try again.';
+            errEl.classList.remove('d-none');
+        }
+
+        btn.innerHTML = '<i class="bi bi-person-plus"></i> Add Member';
+        btn.disabled = false;
+    }
+
+    async function viewMembers(projectId) {
+        currentProjectId = projectId;
+        document.getElementById('membersList').innerHTML = 'Loading...';
+        new bootstrap.Modal(
+            document.getElementById('viewMembersModal')).show();
+
+        try {
+            const response = await fetch(
+                `${API}/api/projects/${projectId}/members`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            const members = await response.json();
+
+            document.getElementById('membersList').innerHTML =
+                members.map(m => `
+                        <div class="d-flex justify-content-between
+                                    align-items-center border-bottom py-2">
+                            <div>
+                                <strong>${m.user.name}</strong>
+                                <br>
+                                <small class="text-muted">${m.user.email}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge ${m.role === 'ADMIN' ?
+                    'bg-primary' : 'bg-secondary'}">
+                                    ${m.role}
+                                </span>
+                                ${m.role !== 'ADMIN' ? `
+                                <button onclick="removeMember(${projectId}, ${m.user.id})"
+                                        class="btn btn-danger btn-sm">
+                                    <i class="bi bi-person-dash"></i> Remove
+                                </button>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+        } catch (error) {
+            document.getElementById('membersList').innerHTML =
+                '<p class="text-danger">Failed to load members!</p>';
+        }
+    }
+
+    async function removeMember(projectId, userId) {
+        if (!confirm('Remove this member from project?')) return;
+        try {
+            const response = await fetch(
+                `${API}/api/projects/${projectId}/members/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            if (response.ok) {
+                viewMembers(projectId);
+            } else {
+                alert('Failed to remove member!');
+            }
+        } catch (error) {
+            alert('Server error!');
+        }
+    }
+
     function openProject(projectId) {
-        // Save project id and go to tasks page
         localStorage.setItem('currentProjectId', projectId);
         window.location.href = 'tasks.html';
     }
