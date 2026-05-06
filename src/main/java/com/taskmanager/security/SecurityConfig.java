@@ -1,6 +1,5 @@
 package com.taskmanager.security;
 
-import com.taskmanager.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.context.annotation.Lazy;
+import com.taskmanager.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -28,7 +27,6 @@ public class SecurityConfig {
     @Autowired
     private UserRepository userRepository;
 
-    // Tells Spring HOW to load a user from database
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
@@ -50,10 +48,29 @@ public class SecurityConfig {
                                 SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ Allow ALL static HTML pages
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/login.html",
+                                "/signup.html",
+                                "/projects.html",
+                                "/tasks.html",
+                                "/dashboard.html",
+                                "/*.html",
+                                "/*.css",
+                                "/*.js",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/error",
+                                "/favicon.ico"
+                        ).permitAll()
+                        // ✅ Allow auth APIs
                         .requestMatchers("/api/auth/**").permitAll()
+                        // 🔒 Everything else needs token
                         .anyRequest().authenticated()
                 )
-                // Add our JWT filter before every request
                 .addFilterBefore(jwtFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
