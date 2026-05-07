@@ -6,10 +6,6 @@ and tasks efficiently.
 ## 🌐 Live Demo
 👉 https://taskmanager-production-4f97.up.railway.app/index.html
 
-## 📸 Screenshots
-
-> Add screenshots of your app here after recording demo!
-
 ## 🛠️ Tech Stack
 
 ### Backend
