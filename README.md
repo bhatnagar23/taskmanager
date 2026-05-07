@@ -56,7 +56,3 @@ and tasks efficiently.
 ### 🔒 Role-Based Access
 - **Admin** → Full control over project, members and tasks
 - **Member** → Can view and update only assigned tasks
-
----
-
-## 🗄️ Database Design
